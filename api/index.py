@@ -54,6 +54,19 @@ async def vercel_path_fixer(request: Request, call_next):
     
     return await call_next(request)
 
+# Support YouTube cookies from environment or file to bypass cloud IP blocks
+COOKIE_FILE = None
+cookies_env = os.environ.get("YOUTUBE_COOKIES")
+if cookies_env:
+    try:
+        cookie_path = Path("/tmp/cookies.txt") if IS_VERCEL else (BASE_DIR / "cookies.txt")
+        cookie_path.write_text(cookies_env, encoding="utf-8")
+        COOKIE_FILE = str(cookie_path)
+    except Exception:
+        pass
+elif (BASE_DIR / "cookies.txt").exists():
+    COOKIE_FILE = str(BASE_DIR / "cookies.txt")
+
 # Auto-cleanup files older than 30 minutes
 def cleanup_old_files():
     try:
@@ -128,6 +141,8 @@ async def get_video_info(req: VideoInfoRequest):
                     opts = dict(ydl_base_opts)
                     if client_list:
                         opts['extractor_args'] = {'youtube': {'player_client': client_list}}
+                    if COOKIE_FILE:
+                        opts['cookiefile'] = COOKIE_FILE
                     with yt_dlp.YoutubeDL(opts) as ydl:
                         return ydl.extract_info(url, download=False)
                 except Exception as e:
@@ -286,6 +301,9 @@ def run_download_thread(task_id: str, req: DownloadRequest):
             }
         },
     }
+
+    if COOKIE_FILE:
+        ydl_opts['cookiefile'] = COOKIE_FILE
 
     if req.download_subs:
         ydl_opts['writesubtitles'] = True

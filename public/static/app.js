@@ -121,7 +121,11 @@ async function analyzeUrl() {
     currentVideoData = data;
     renderVideoInfo(data);
   } catch (err) {
-    showAlert(err.message);
+    let msg = err.message || "Đã xảy ra lỗi.";
+    if (msg.includes("confirm you’re not a bot") || msg.includes("Sign in to confirm") || msg.includes("bot")) {
+      msg = "YouTube đang tạm khóa IP Cloud (Vercel) để kiểm tra bot. Bạn hãy nháy đúp file run.bat để chạy trực tiếp trên máy - sẽ tải siêu tốc và không bao giờ bị chặn!";
+    }
+    showAlert(msg);
   } finally {
     btnText.classList.remove("hidden");
     btnLoader.classList.add("hidden");
