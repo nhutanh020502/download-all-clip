@@ -7,10 +7,14 @@ import shutil
 import asyncio
 import threading
 from pathlib import Path
+from urllib.parse import quote
 from typing import Dict, Any, Optional
 
-import static_ffmpeg
-static_ffmpeg.add_paths()
+try:
+    import static_ffmpeg
+    static_ffmpeg.add_paths()
+except Exception as e:
+    print(f"Notice: static_ffmpeg init skipped or not required ({e})")
 
 import yt_dlp
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
@@ -19,12 +23,25 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
-DOWNLOADS_DIR = BASE_DIR / "downloads"
+# On Vercel / serverless, write to /tmp/downloads; locally write to ./downloads
+IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+DOWNLOADS_DIR = Path("/tmp/downloads") if IS_VERCEL else (BASE_DIR / "downloads")
 DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="YouTube Ultimate Downloader", version="1.0.0")
+
+# Auto-cleanup files older than 30 minutes to save disk space on server
+def cleanup_old_files():
+    try:
+        now = time.time()
+        for p in DOWNLOADS_DIR.iterdir():
+            if p.is_file() and p.name != ".gitkeep":
+                if now - p.stat().st_mtime > 1800:
+                    p.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 # Store download task progress
 tasks: Dict[str, Dict[str, Any]] = {}
@@ -128,6 +145,20 @@ async def get_video_info(req: VideoInfoRequest):
 
         sorted_res = sorted(resolutions_map.values(), key=lambda x: x['height'], reverse=True)
 
+        # Extract direct progressive streams (video + audio combined, ready for instant browser download)
+        direct_formats = []
+        for f in formats:
+            if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url'):
+                direct_formats.append({
+                    'format_id': f.get('format_id'),
+                    'ext': f.get('ext', 'mp4'),
+                    'label': f"{f.get('height')}p (Tải trực tiếp)",
+                    'height': f.get('height') or 0,
+                    'url': f.get('url'),
+                    'filesize_str': format_bytes(f.get('filesize') or f.get('filesize_approx'))
+                })
+        direct_formats.sort(key=lambda x: x['height'], reverse=True)
+
         # Subtitles available
         subtitles_available = []
         if 'subtitles' in info and info['subtitles']:
@@ -146,6 +177,7 @@ async def get_video_info(req: VideoInfoRequest):
             "upload_date": info.get("upload_date"),
             "webpage_url": info.get("webpage_url", url),
             "resolutions": sorted_res,
+            "direct_formats": direct_formats[:3],
             "subtitles": subtitles_available[:10]  # Show first few
         }
         return JSONResponse(content=data)
@@ -284,6 +316,7 @@ def run_download_thread(task_id: str, req: DownloadRequest):
 
 @app.post("/api/download")
 async def start_download(req: DownloadRequest, background_tasks: BackgroundTasks):
+    cleanup_old_files()
     task_id = str(uuid.uuid4())
     tasks[task_id] = {
         "task_id": task_id,
@@ -357,29 +390,25 @@ async def get_download_history():
 @app.post("/api/open-folder")
 async def open_downloads_folder():
     try:
-        if sys.platform == "win32":
+        if sys.platform == "win32" and not IS_VERCEL:
             os.startfile(DOWNLOADS_DIR)
-        else:
-            import subprocess
-            subprocess.Popen(["xdg-open", str(DOWNLOADS_DIR)])
-        return {"status": "ok", "message": "Đã mở thư mục downloads!"}
+            return {"status": "ok", "message": "Đã mở thư mục downloads!"}
+        return {"status": "info", "message": "Ứng dụng đang chạy trên Cloud. Hãy tải file trực tiếp về trình duyệt!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "info", "message": str(e)}
 
 @app.post("/api/open-file")
 async def open_file(req: OpenFileRequest):
     file_path = DOWNLOADS_DIR / req.filename
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File không tồn tại!")
+        raise HTTPException(status_code=404, detail="File không tồn tại hoặc đã hết hạn!")
     try:
-        if sys.platform == "win32":
+        if sys.platform == "win32" and not IS_VERCEL:
             os.startfile(file_path)
-        else:
-            import subprocess
-            subprocess.Popen(["xdg-open", str(file_path)])
-        return {"status": "ok", "message": f"Đã mở file {req.filename}"}
+            return {"status": "ok", "message": f"Đã mở file {req.filename}"}
+        return {"status": "info", "message": "Đang chạy trên Cloud. Vui lòng tải file qua trình duyệt!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "info", "message": str(e)}
 
 @app.delete("/api/delete-file")
 async def delete_file(req: DeleteFileRequest):
@@ -396,8 +425,19 @@ async def delete_file(req: DeleteFileRequest):
 async def download_file_browser(filename: str):
     file_path = DOWNLOADS_DIR / filename
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File không tồn tại!")
-    return FileResponse(path=file_path, filename=filename, media_type="application/octet-stream")
+        raise HTTPException(status_code=404, detail="File không tồn tại hoặc đã hết hạn!")
+    
+    encoded_name = quote(filename)
+    headers = {
+        "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}",
+        "Access-Control-Expose-Headers": "Content-Disposition"
+    }
+    return FileResponse(
+        path=file_path, 
+        filename=filename, 
+        media_type="application/octet-stream",
+        headers=headers
+    )
 
 # Mount static folder
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

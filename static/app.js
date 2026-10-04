@@ -292,8 +292,14 @@ function startTrackingProgress(taskId) {
       btnStartDownload.disabled = false;
       progressBarFill.style.width = "100%";
       progressPercent.textContent = "100%";
-      progressStage.textContent = "Đã hoàn thành và lưu file vào máy!";
+      progressStage.textContent = "Đã hoàn thành! Đang tự động lưu file về máy bạn...";
       progressSuccessActions.classList.remove("hidden");
+      
+      const fileToSave = data.filename || lastDownloadedFilename;
+      if (fileToSave) {
+        lastDownloadedFilename = fileToSave;
+        triggerBrowserDownload(fileToSave);
+      }
       loadHistory();
     } else if (data.status === "error") {
       activeEventSource.close();
@@ -308,15 +314,30 @@ function startTrackingProgress(taskId) {
   };
 }
 
-// Open / Play Last Downloaded
+// Function to trigger browser native download dialog / Save As
+function triggerBrowserDownload(filename) {
+  if (!filename) return;
+  const decoded = decodeURIComponent(filename);
+  const downloadUrl = `/api/download-file/${encodeURIComponent(decoded)}`;
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = decoded;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+  }, 1000);
+}
+
+// Re-download Last Processed File
 btnPlayDownloaded.addEventListener("click", () => {
   if (lastDownloadedFilename) {
-    openSpecificFile(lastDownloadedFilename);
+    triggerBrowserDownload(lastDownloadedFilename);
   }
 });
 
 btnShowFolderDownloaded.addEventListener("click", () => {
-  openFolder();
+  showAlert("File đã tải về thiết bị của bạn! Nhấn Ctrl + J trên trình duyệt (hoặc kiểm tra thư mục Downloads) để xem file.");
 });
 
 // Download History & File System Operations
@@ -352,13 +373,10 @@ async function loadHistory() {
           </div>
         </div>
         <div class="file-actions">
-          <button class="btn-file-action" title="Mở file trên máy" onclick="openSpecificFile('${encodeURIComponent(file.name)}')">
-            <i class="fa-solid fa-play"></i>
-          </button>
-          <button class="btn-file-action" title="Tải file qua trình duyệt" onclick="downloadViaBrowser('${encodeURIComponent(file.name)}')">
+          <button class="btn-file-action" title="Tải file về máy" onclick="triggerBrowserDownload('${encodeURIComponent(file.name)}')">
             <i class="fa-solid fa-download"></i>
           </button>
-          <button class="btn-file-action delete" title="Xóa file khỏi máy" onclick="deleteSpecificFile('${encodeURIComponent(file.name)}')">
+          <button class="btn-file-action delete" title="Xóa file khỏi server" onclick="deleteSpecificFile('${encodeURIComponent(file.name)}')">
             <i class="fa-solid fa-trash-can"></i>
           </button>
         </div>
@@ -368,35 +386,6 @@ async function loadHistory() {
   } catch (err) {
     console.error("Lỗi tải lịch sử file:", err);
   }
-}
-
-async function openFolder() {
-  try {
-    const res = await fetch("/api/open-folder", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail);
-  } catch (err) {
-    showAlert(`Không thể mở thư mục: ${err.message}`);
-  }
-}
-
-async function openSpecificFile(encodedName) {
-  const filename = decodeURIComponent(encodedName);
-  try {
-    const res = await fetch("/api/open-file", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail);
-  } catch (err) {
-    showAlert(`Không thể mở file: ${err.message}`);
-  }
-}
-
-function downloadViaBrowser(encodedName) {
-  window.open(`/api/download-file/${encodedName}`, "_blank");
 }
 
 async function deleteSpecificFile(encodedName) {
@@ -421,7 +410,9 @@ async function deleteSpecificFile(encodedName) {
 }
 
 // Initial hooks
-btnOpenFolder.addEventListener("click", openFolder);
+btnOpenFolder.addEventListener("click", () => {
+  document.querySelector(".history-section")?.scrollIntoView({ behavior: "smooth" });
+});
 btnRefreshHistory.addEventListener("click", loadHistory);
 
 // Load history on start

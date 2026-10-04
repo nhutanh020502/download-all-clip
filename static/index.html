@@ -33,8 +33,8 @@
           <span class="pulse-dot"></span>
           <span>FFmpeg + yt-dlp</span>
         </div>
-        <button id="btn-open-folder" class="btn-secondary" title="Mở thư mục lưu trữ trên máy tính">
-          <i class="fa-regular fa-folder-open"></i> Thư mục tải về
+        <button id="btn-open-folder" class="btn-secondary" title="Xem danh sách file đã xử lý">
+          <i class="fa-solid fa-list-check"></i> Danh sách file
         </button>
       </div>
     </header>
@@ -207,10 +207,10 @@
 
         <!-- Success Actions Box -->
         <div id="progress-success-actions" class="success-actions hidden">
-          <span class="success-badge"><i class="fa-solid fa-circle-check"></i> Đã hoàn thành và lưu vào máy!</span>
+          <span class="success-badge"><i class="fa-solid fa-circle-check"></i> Xử lý xong! Trình duyệt đang tải file về máy bạn...</span>
           <div class="success-buttons">
-            <button id="btn-play-downloaded" class="btn-success-action"><i class="fa-solid fa-play"></i> Mở file ngay</button>
-            <button id="btn-show-folder-downloaded" class="btn-success-action"><i class="fa-solid fa-folder"></i> Mở thư mục chứa</button>
+            <button id="btn-play-downloaded" class="btn-success-action"><i class="fa-solid fa-download"></i> Tải lại file về máy</button>
+            <button id="btn-show-folder-downloaded" class="btn-success-action"><i class="fa-solid fa-circle-info"></i> Xem vị trí file</button>
           </div>
         </div>
       </div>
@@ -221,7 +221,7 @@
       <div class="history-header">
         <div class="history-title">
           <i class="fa-solid fa-box-archive"></i>
-          <span>Thư viện video đã tải trên máy</span>
+          <span>Danh sách file gần đây trên hệ thống</span>
           <span id="history-count" class="count-badge">0</span>
         </div>
         <div class="history-controls">
@@ -233,7 +233,7 @@
 
       <div id="history-empty" class="history-empty">
         <i class="fa-regular fa-folder-open"></i>
-        <p>Chưa có file tải nào trong thư mục. Hãy dán link và tải clip đầu tiên của bạn!</p>
+        <p>Chưa có file nào sẵn sàng. Hãy dán link YouTube để bắt đầu tải về máy!</p>
       </div>
 
       <div id="history-list" class="history-list">
@@ -242,7 +242,7 @@
     </section>
 
     <footer class="app-footer">
-      <p>YouTube Ultimate Downloader • Xử lý phân giải 8K/4K/FHD qua FFmpeg lossless • Chạy cục bộ bảo mật 100%</p>
+      <p>YouTube Ultimate Downloader • Tải video trực tuyến chất lượng cao • Tự động lưu trực tiếp vào thư mục Downloads của bạn</p>
     </footer>
   </div>
 
