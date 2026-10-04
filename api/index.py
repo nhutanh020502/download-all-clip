@@ -113,22 +113,27 @@ async def get_video_info(req: VideoInfoRequest):
     if not url:
         raise HTTPException(status_code=400, detail="Vui lòng nhập đường dẫn YouTube!")
 
-    ydl_opts = {
+    ydl_base_opts = {
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'android', 'web']
-            }
-        }
     }
 
     try:
         loop = asyncio.get_event_loop()
         def extract():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                return ydl.extract_info(url, download=False)
+            last_err = None
+            for client_list in [['android'], None]:
+                try:
+                    opts = dict(ydl_base_opts)
+                    if client_list:
+                        opts['extractor_args'] = {'youtube': {'player_client': client_list}}
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        return ydl.extract_info(url, download=False)
+                except Exception as e:
+                    last_err = e
+                    continue
+            raise last_err
 
         info = await loop.run_in_executor(None, extract)
         if not info:
@@ -277,7 +282,7 @@ def run_download_thread(task_id: str, req: DownloadRequest):
         'writethumbnail': req.download_thumbnail,
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android', 'web']
+                'player_client': ['android']
             }
         },
     }
