@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Ultimate Downloader - Tải Video 8K/4K/FHD & MP3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Background Glow Orbs -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <div class="app-container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="fa-brands fa-youtube"></i>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">YT Downloader <span class="badge-pro">PRO</span></span>
+          <span class="logo-sub">Full Resolution 8K / 4K / 2K / 1080p</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="engine-badge">
+          <span class="pulse-dot"></span>
+          <span>FFmpeg + yt-dlp</span>
+        </div>
+        <button id="btn-open-folder" class="btn-secondary" title="Mở thư mục lưu trữ trên máy tính">
+          <i class="fa-regular fa-folder-open"></i> Thư mục tải về
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero Input Section -->
+    <section class="hero-section">
+      <h1 class="hero-title">Tải Video YouTube Đầy Đủ Độ Phân Giải</h1>
+      <p class="hero-subtitle">
+        Hỗ trợ tối đa <strong>8K, 4K UHD, 2K, 1080p 60FPS</strong> (tự động ghép video + âm thanh cao nhất) & Tách nhạc <strong>MP3 320kbps</strong>.
+      </p>
+
+      <div class="search-box-wrapper">
+        <div class="search-box">
+          <div class="input-icon">
+            <i class="fa-solid fa-link"></i>
+          </div>
+          <input 
+            type="text" 
+            id="url-input" 
+            placeholder="Dán link YouTube (Video, Shorts, Music)..." 
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="btn-paste" class="btn-icon" title="Dán từ Clipboard">
+            <i class="fa-regular fa-clipboard"></i>
+          </button>
+          <button id="btn-analyze" class="btn-primary">
+            <span class="btn-text"><i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích</span>
+            <span class="btn-loader hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="quick-tags">
+        <span class="tag"><i class="fa-solid fa-bolt"></i> 8K/4K/FHD 60fps</span>
+        <span class="tag"><i class="fa-solid fa-music"></i> MP3 320kbps</span>
+        <span class="tag"><i class="fa-solid fa-film"></i> Shorts & Video dài</span>
+        <span class="tag"><i class="fa-solid fa-closed-captioning"></i> Phụ đề & Thumbnail</span>
+      </div>
+    </section>
+
+    <!-- Error Alert Message -->
+    <div id="alert-banner" class="alert-banner hidden">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span id="alert-text">Đã xảy ra lỗi</span>
+      <button id="alert-close" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Video Analysis Card (Hidden by default) -->
+    <section id="video-card" class="video-card hidden">
+      <div class="card-inner">
+        <!-- Thumbnail side -->
+        <div class="thumbnail-wrapper">
+          <img id="video-thumb" src="" alt="Video thumbnail">
+          <span id="video-duration" class="thumb-badge">00:00</span>
+          <div id="video-quality-tag" class="quality-badge">4K ULTRA HD</div>
+        </div>
+
+        <!-- Details side -->
+        <div class="video-details">
+          <h2 id="video-title" class="video-title">Tiêu đề video</h2>
+          <div class="video-meta">
+            <span class="meta-item"><i class="fa-brands fa-youtube"></i> <span id="video-channel">Kênh</span></span>
+            <span class="meta-item"><i class="fa-regular fa-eye"></i> <span id="video-views">0</span> lượt xem</span>
+          </div>
+
+          <!-- Format Tabs -->
+          <div class="format-tabs">
+            <button id="tab-video" class="tab-btn active" data-tab="video">
+              <i class="fa-solid fa-video"></i> Tải Video (Full HD / 4K / 8K)
+            </button>
+            <button id="tab-audio" class="tab-btn" data-tab="audio">
+              <i class="fa-solid fa-music"></i> Tải Âm Thanh (MP3 / M4A / WAV)
+            </button>
+          </div>
+
+          <!-- Video Options Panel -->
+          <div id="panel-video" class="tab-panel active">
+            <label class="section-label"><i class="fa-solid fa-sliders"></i> Chọn độ phân giải:</label>
+            <div id="resolution-grid" class="resolution-grid">
+              <!-- Dynamically populated resolutions -->
+            </div>
+
+            <div class="options-row">
+              <div class="select-group">
+                <label for="select-container">Định dạng file:</label>
+                <select id="select-container" class="custom-select">
+                  <option value="mp4" selected>MP4 (Tương thích tốt nhất)</option>
+                  <option value="mkv">MKV (Hỗ trợ codec AV1 / VP9 cao cấp)</option>
+                  <option value="webm">WEBM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Options Panel -->
+          <div id="panel-audio" class="tab-panel hidden">
+            <label class="section-label"><i class="fa-solid fa-sliders"></i> Chọn định dạng âm thanh:</label>
+            <div class="resolution-grid">
+              <div class="res-card active" data-audio-fmt="mp3" data-audio-quality="320">
+                <div class="res-title">MP3 320kbps</div>
+                <div class="res-desc">Chất lượng cao nhất (CBR 320k)</div>
+              </div>
+              <div class="res-card" data-audio-fmt="mp3" data-audio-quality="256">
+                <div class="res-title">MP3 256kbps</div>
+                <div class="res-desc">Chất lượng tốt (256k)</div>
+              </div>
+              <div class="res-card" data-audio-fmt="m4a" data-audio-quality="192">
+                <div class="res-title">M4A (AAC)</div>
+                <div class="res-desc">Luồng gốc không nén lại</div>
+              </div>
+              <div class="res-card" data-audio-fmt="wav" data-audio-quality="320">
+                <div class="res-title">WAV (Lossless)</div>
+                <div class="res-desc">Âm thanh nguyên bản không nén</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extra Options -->
+          <div class="extra-options">
+            <label class="checkbox-container">
+              <input type="checkbox" id="check-subs">
+              <span class="checkmark"></span>
+              <span>Tải phụ đề (nếu có tiếng Việt / Anh)</span>
+            </label>
+            <label class="checkbox-container">
+              <input type="checkbox" id="check-thumb">
+              <span class="checkmark"></span>
+              <span>Lưu ảnh bìa Thumbnail</span>
+            </label>
+          </div>
+
+          <!-- Start Download Button -->
+          <div class="action-row">
+            <button id="btn-start-download" class="btn-download">
+              <i class="fa-solid fa-download"></i> Bắt Đầu Tải Xuống
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Download Progress Card -->
+    <section id="progress-card" class="progress-card hidden">
+      <div class="progress-inner">
+        <div class="progress-header">
+          <div class="progress-title-block">
+            <span class="progress-icon"><i class="fa-solid fa-cloud-arrow-down fa-bounce"></i></span>
+            <div>
+              <h3 id="progress-filename" class="progress-filename">Đang tải video...</h3>
+              <div id="progress-stage" class="progress-stage">Đang khởi tạo FFmpeg & yt-dlp...</div>
+            </div>
+          </div>
+          <div id="progress-percent" class="progress-percent">0%</div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar-container">
+          <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%">
+            <div class="progress-bar-glow"></div>
+          </div>
+        </div>
+
+        <!-- Progress Stats -->
+        <div class="progress-stats">
+          <div class="stat"><i class="fa-solid fa-gauge-high"></i> Tốc độ: <span id="stat-speed">0 MB/s</span></div>
+          <div class="stat"><i class="fa-solid fa-hard-drive"></i> Dung lượng: <span id="stat-downloaded">0 MB</span> / <span id="stat-total">...</span></div>
+          <div class="stat"><i class="fa-regular fa-clock"></i> Còn lại: <span id="stat-eta">...</span></div>
+        </div>
+
+        <!-- Success Actions Box -->
+        <div id="progress-success-actions" class="success-actions hidden">
+          <span class="success-badge"><i class="fa-solid fa-circle-check"></i> Đã hoàn thành và lưu vào máy!</span>
+          <div class="success-buttons">
+            <button id="btn-play-downloaded" class="btn-success-action"><i class="fa-solid fa-play"></i> Mở file ngay</button>
+            <button id="btn-show-folder-downloaded" class="btn-success-action"><i class="fa-solid fa-folder"></i> Mở thư mục chứa</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download History & Library -->
+    <section class="history-section">
+      <div class="history-header">
+        <div class="history-title">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>Thư viện video đã tải trên máy</span>
+          <span id="history-count" class="count-badge">0</span>
+        </div>
+        <div class="history-controls">
+          <button id="btn-refresh-history" class="btn-icon-subtle" title="Làm mới danh sách">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="history-empty" class="history-empty">
+        <i class="fa-regular fa-folder-open"></i>
+        <p>Chưa có file tải nào trong thư mục. Hãy dán link và tải clip đầu tiên của bạn!</p>
+      </div>
+
+      <div id="history-list" class="history-list">
+        <!-- Dynamically populated files -->
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      <p>YouTube Ultimate Downloader • Xử lý phân giải 8K/4K/FHD qua FFmpeg lossless • Chạy cục bộ bảo mật 100%</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
