@@ -442,9 +442,21 @@ async def download_file_browser(filename: str):
 # Mount static folder
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.get("/static/{file_path:path}")
+async def serve_static_file(file_path: str):
+    p = STATIC_DIR / file_path
+    if not p.exists():
+        p = BASE_DIR / "public" / "static" / file_path
+    if p.exists() and p.is_file():
+        media_type = "text/css" if file_path.endswith(".css") else ("application/javascript" if file_path.endswith(".js") else None)
+        return FileResponse(p, media_type=media_type)
+    raise HTTPException(status_code=404, detail="File not found")
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    index_file = STATIC_DIR / "index.html"
+    index_file = BASE_DIR / "public" / "index.html"
+    if not index_file.exists():
+        index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Loading UI...</h1>")
