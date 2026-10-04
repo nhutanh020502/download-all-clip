@@ -28,7 +28,7 @@ IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION
 DOWNLOADS_DIR = Path("/tmp/downloads") if IS_VERCEL else (BASE_DIR / "downloads")
 DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="YouTube Ultimate Downloader", version="1.0.0")
+app = FastAPI(title="YouTube Ultimate Downloader", version="1.0.0", redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +37,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def vercel_path_fixer(request: Request, call_next):
+    matched = request.headers.get("x-matched-path")
+    if matched:
+        clean_path = matched.split("?")[0]
+        if "index.py" not in clean_path:
+            request.scope["path"] = clean_path
+    elif "index.py" in request.scope.get("path", ""):
+        forwarded = request.headers.get("x-forwarded-uri")
+        if forwarded:
+            clean_fwd = forwarded.split("?")[0]
+            if "index.py" not in clean_fwd:
+                request.scope["path"] = clean_fwd
+    
+    return await call_next(request)
 
 # Auto-cleanup files older than 30 minutes
 def cleanup_old_files():
@@ -436,6 +452,30 @@ async def download_file_browser(filename: str):
 # Include router under both /api and root paths so it NEVER 404s
 app.include_router(router, prefix="/api")
 app.include_router(router)
+
+@app.post("/api/index.py")
+@app.post("/index.py")
+@app.post("/api")
+async def fallback_post(request: Request, background_tasks: BackgroundTasks):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    if "url" in body and ("format_type" not in body or not body.get("format_type")):
+        return await get_video_info(VideoInfoRequest(**body))
+    elif "url" in body and body.get("format_type"):
+        return await start_download(DownloadRequest(**body), background_tasks)
+    elif "filename" in body:
+        return await open_file(OpenFileRequest(**body))
+    
+    return {"status": "ok", "message": "API handler ready"}
+
+@app.get("/api/index.py")
+@app.get("/index.py")
+@app.get("/api")
+async def fallback_get():
+    return await get_download_history()
 
 @app.get("/")
 async def serve_index():
