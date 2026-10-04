@@ -117,6 +117,11 @@ async def get_video_info(req: VideoInfoRequest):
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'android', 'web']
+            }
+        }
     }
 
     try:
@@ -270,6 +275,11 @@ def run_download_thread(task_id: str, req: DownloadRequest):
         'progress_hooks': [lambda d: progress_hook(d, task_id)],
         'postprocessor_hooks': [lambda d: postprocessor_hook(d, task_id)],
         'writethumbnail': req.download_thumbnail,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'android', 'web']
+            }
+        },
     }
 
     if req.download_subs:
